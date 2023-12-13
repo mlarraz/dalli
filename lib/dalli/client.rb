@@ -49,6 +49,11 @@ module Dalli
     def initialize(servers = nil, options = {})
       @normalized_servers = ::Dalli::ServersArgNormalizer.normalize_servers(servers)
       @options = normalize_options(options)
+
+      if !@options[:protocol].nil? && @options[:protocol] != :binary
+        raise NotImplementedError, "This fork does not support the #{@options[:protocol]} protocol because safe_get is not implemented"
+      end
+
       @key_manager = ::Dalli::KeyManager.new(@options)
       @ring = nil
     end
@@ -61,7 +66,7 @@ module Dalli
     # Get the value associated with the key.
     # If a value is not found, then +nil+ is returned.
     def get(key, req_options = nil)
-      perform(:get, key, req_options)
+      perform(:safe_get, key, req_options)
     end
 
     ##

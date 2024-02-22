@@ -37,7 +37,7 @@ module Dalli
   QUIET = :dalli_multi
 
   def self.logger
-    @logger ||= (rails_logger || default_logger)
+    @logger ||= rails_logger || default_logger
   end
 
   def self.rails_logger

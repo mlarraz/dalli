@@ -4,6 +4,22 @@ Dalli Changelog
 Unreleased
 ==========
 
+3.2.8
+==========
+
+- Handle IO::TimeoutError when establishing connection (eugeneius)
+- Drop dependency on base64 gem (Earlopain)
+- Address incompatibility with resolv-replace (y9v)
+- Add rubygems.org metadata (m-nakamura145)
+
+3.2.7
+==========
+
+- Fix cascading error when there's an underlying network error in a pipelined get (eugeneius)
+- Ruby 3.4/head compatibility by adding base64 to gemspec (tagliala)
+- Add Ruby 3.3 to CI (m-nakamura145)
+- Use Socket's connect_timeout when available, and pass timeout to the socket's send and receive timeouts (mlarraz)
+
 3.2.6
 ==========
 

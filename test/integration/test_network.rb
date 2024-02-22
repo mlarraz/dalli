@@ -42,6 +42,13 @@ describe 'Network' do
             end
           end
 
+          it 'handle socket timeouts' do
+            dc = Dalli::Client.new('localhost:19123', socket_timeout: 0)
+            assert_raises Dalli::RingError, message: 'No server available' do
+              dc.get('abc')
+            end
+          end
+
           it 'handle connect timeouts' do
             memcached_mock(lambda { |sock|
                              sleep(0.6)
@@ -109,6 +116,16 @@ describe 'Network' do
             optval = optval.unpack 'i'
 
             refute_equal(optval[0], 0)
+          end
+        end
+      end
+
+      it 'handles timeout error during pipelined get' do
+        with_nil_logger do
+          memcached(p, 19_191) do |dc|
+            dc.send(:ring).server_for_key('abc').sock.stub(:write, proc { raise Timeout::Error }) do
+              assert_empty dc.get_multi(['abc'])
+            end
           end
         end
       end

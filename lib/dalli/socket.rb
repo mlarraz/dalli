@@ -89,12 +89,30 @@ module Dalli
       attr_accessor :options
 
       def self.open(host, port, options = {})
-        Timeout.timeout(options[:socket_timeout]) do
-          sock = new(host, port)
+        create_socket_with_timeout(host, port, options) do |sock|
           sock.options = { host: host, port: port }.merge(options)
           init_socket_options(sock, options)
 
           options[:ssl_context] ? wrapping_ssl_socket(sock, host, options[:ssl_context]) : sock
+        end
+      end
+
+      def self.create_socket_with_timeout(host, port, options)
+        # Check that TCPSocket#initialize was not overwritten by resolv-replace gem
+        # (part of ruby standard library since 3.0.0, should be removed in 3.4.0),
+        # as it does not handle keyword arguments correctly.
+        # To check this we are using the fact that resolv-replace
+        # aliases TCPSocket#initialize method to #original_resolv_initialize.
+        # https://github.com/ruby/resolv-replace/blob/v0.1.1/lib/resolv-replace.rb#L21
+        if RUBY_VERSION >= '3.0' &&
+           !::TCPSocket.private_instance_methods.include?(:original_resolv_initialize)
+          sock = new(host, port, connect_timeout: options[:socket_timeout])
+          yield(sock)
+        else
+          Timeout.timeout(options[:socket_timeout]) do
+            sock = new(host, port)
+            yield(sock)
+          end
         end
       end
 
@@ -103,6 +121,15 @@ module Dalli
         sock.setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_KEEPALIVE, true) if options[:keepalive]
         sock.setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_RCVBUF, options[:rcvbuf]) if options[:rcvbuf]
         sock.setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_SNDBUF, options[:sndbuf]) if options[:sndbuf]
+
+        return unless options[:socket_timeout]
+
+        seconds, fractional = options[:socket_timeout].divmod(1)
+        microseconds = fractional * 1_000_000
+        timeval = [seconds, microseconds].pack('l_2')
+
+        sock.setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_RCVTIMEO, timeval)
+        sock.setsockopt(::Socket::SOL_SOCKET, ::Socket::SO_SNDTIMEO, timeval)
       end
 
       def self.wrapping_ssl_socket(tcp_socket, host, ssl_context)

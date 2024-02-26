@@ -29,7 +29,7 @@ module Dalli
 
     def setup_requests(keys)
       groups = groups_for_keys(keys)
-      groups = make_getkq_requests(groups)
+      make_getkq_requests(groups)
 
       # TODO: How does this exit on a NetworkError
       finish_queries(groups.keys)
@@ -44,15 +44,12 @@ module Dalli
     # the opaque value to match requests to responses.
     ##
     def make_getkq_requests(groups)
-      successful_groups = {}
       groups.each do |server, keys_for_server|
         server.request(:pipelined_get, keys_for_server)
-        successful_groups[server] = keys_for_server
       rescue DalliError, NetworkError => e
         Dalli.logger.debug { e.inspect }
         Dalli.logger.debug { "unable to get keys for server #{server.name}" }
       end
-      successful_groups
     end
 
     ##

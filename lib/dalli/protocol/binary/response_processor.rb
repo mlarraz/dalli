@@ -85,7 +85,7 @@ module Dalli
           resp_header, body = read_response
 
           return false if resp_header.not_stored? # Not stored, normal status for add operation
-          return cache_nils ? ::Dalli::NOT_FOUND : [key, nil] if resp_header.not_found?
+          return cache_nils ? [key, ::Dalli::NOT_FOUND] : [key, nil] if resp_header.not_found?
 
           raise_on_not_ok!(resp_header)
           return true unless body
